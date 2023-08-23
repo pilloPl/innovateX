@@ -1,18 +1,24 @@
 package projects;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import java.time.Instant;
 
-
-import java.time.Instant;
 import java.util.List;
+
+record CalculateProfitQuery(List<Project> projects, List<Resource> resources, Function<Project, Double> profitFunction) {};
+
+interface CalculatingRiskWorkflow extends Function<Supplier<Resource>, Function<CalculateProfitQuery, Result>> {};
+
 
 class Main {
 
+    public static final Function<List<Project>, Function<List<Resource>, Function<Function<Project, Double>, Result>>> WORKFLOW = projects -> resources -> profitFunction -> new ProjectOptimizer()
+            .apply(new CalculateProfitQuery(projects, resources, profitFunction));
+
     public static void main(String[] args) {
-        ProjectOptimizer optimizer = new ProjectOptimizer();
 
         // Tworzenie zasobów
         Resource skill1 = new Resource("Ania", "Java Developer", ResourceType.SKILL);
@@ -20,27 +26,33 @@ class Main {
         Resource skill3 = new Resource("Staszek", "Database Admin", ResourceType.SKILL);
         Resource tool1 = new Resource("XPS", "Laptop", ResourceType.DEVICE);
 
-        // Tworzenie projektów
-        Project project1 = new Project("Website Creation", 1000, 3000,
+        // Creating projects
+        Project project1 = new Project("Website Creation", 1000, 3000, 30, 500,
                 Arrays.asList(
                         new RequiredResource("Java Developer", ResourceType.SKILL),
                         new RequiredResource("Web Designer", ResourceType.SKILL)
                 )
         );
 
-        Project project2 = new Project("Database Setup", 1500, 4000,
+        Project project2 = new Project("Database Setup", 1500, 4000, 50, 800,
                 Arrays.asList(
                         new RequiredResource("Database Admin", ResourceType.SKILL)
                 )
         );
+        List<Project> projectsToOptimize = Arrays.asList(project1, project2);
+        List<Resource> resourcesWeHave = Arrays.asList(skill1, skill2, tool1);
 
-        // Test
-        List<Project> projects = Arrays.asList(project1, project2);
-        List<Resource> resources = Arrays.asList(skill1, skill2 , tool1, skill3);
-        Pair<Double, List<Project>> result = optimizer.maxProfit(projects, resources);
+        Result result = WORKFLOW
+                .apply(projectsToOptimize)
+                .apply(resourcesWeHave)
+                .apply(chooseProfitFunction());
 
-        System.out.println("Max Profit: " + result.getFirst());
-        System.out.println("Selected Projects: " + result.getSecond());
+        System.out.println("Max Profit: " + result.profit());
+        System.out.println("Selected Projects: " + result.projects());
+    }
+
+    private static Function<Project, Double> chooseProfitFunction() {
+        return project -> project.estimatedEarnings() - project.estimatedBudget();
     }
 }
 
@@ -52,16 +64,17 @@ record Resource(String id, String name, ResourceType type) {}
 
 record RequiredResource(String name, ResourceType type) {}
 
-record Project(String name, double estimatedBudget, double estimatedEarnings, List<RequiredResource> requiredResources) {
-    double estimatedProfit() {
-        return estimatedEarnings - estimatedBudget;
-    }
+record Project(String name, double estimatedBudget, double estimatedEarnings, int risk, double penalty, List<RequiredResource> requiredResources) {
+
 }
 
-class ProjectOptimizer {
 
-    Pair<Double, List<Project>> maxProfit(List<Project> projects, List<Resource> resources) {
-        int totalResources = resources.size();
+class ProjectOptimizer implements Function<CalculateProfitQuery, Result> {
+
+    @Override
+    public Result apply(CalculateProfitQuery query) {
+
+        int totalResources = query.resources().size();
         double[] dp = new double[totalResources + 1];
         List<Project>[] projectLists = new List[totalResources + 1];
 
@@ -69,13 +82,14 @@ class ProjectOptimizer {
             projectLists[i] = new ArrayList<>();
         }
 
-        for (Project project : projects) {
-            int requiredResources = countAllocatableResources(project.requiredResources(), resources);
+        for (Project project : query.projects()) {
+            int requiredResources = countAllocatableResources(project.requiredResources(), query.resources());
+            double projectProfit = query.profitFunction().apply(project);
 
             if (requiredResources == project.requiredResources().size()) {
                 for (int j = totalResources; j >= requiredResources; j--) {
-                    if (dp[j] < project.estimatedProfit() + dp[j - requiredResources]) {
-                        dp[j] = project.estimatedProfit() + dp[j - requiredResources];
+                    if (dp[j] < projectProfit + dp[j - requiredResources]) {
+                        dp[j] = projectProfit + dp[j - requiredResources];
                         projectLists[j] = new ArrayList<>(projectLists[j - requiredResources]);
                         projectLists[j].add(project);
                     }
@@ -83,7 +97,7 @@ class ProjectOptimizer {
             }
         }
 
-        return new Pair<>(dp[totalResources], projectLists[totalResources]);
+        return new Result(dp[totalResources], projectLists[totalResources]);
     }
 
     private int countAllocatableResources(List<RequiredResource> requiredResources, List<Resource> availableResources) {
@@ -93,30 +107,17 @@ class ProjectOptimizer {
 
         return allocatableResources.size();
     }
+
 }
 
-class Pair<F, S> {
-    private F first;
-    private S second;
+record Result(Double profit, List<Project> projects) {
 
-    Pair(F first, S second) {
-        this.first = first;
-        this.second = second;
-    }
-
-    F getFirst() {
-        return first;
-    }
-
-    S getSecond() {
-        return second;
-    }
 
     @Override
     public String toString() {
-        return "Pair{" +
-                "first=" + first +
-                ", second=" + second +
+        return "Result{" +
+                "profit=" + profit +
+                ", projects=" + projects +
                 '}';
     }
 }
