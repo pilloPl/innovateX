@@ -1,4 +1,4 @@
-package projects;
+package simulation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +39,7 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
     private int countAllocatableResources(List<RequiredResource> requiredResources, List<Resource> availableResources) {
         List<Resource> allocatableResources = availableResources.stream()
                 .filter(resource -> requiredResources.contains(new RequiredResource(resource.name(), resource.type())))
-                .collect(Collectors.toList());
+                .toList();
 
         return allocatableResources.size();
     }

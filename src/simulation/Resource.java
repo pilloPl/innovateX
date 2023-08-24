@@ -1,4 +1,4 @@
-package projects;
+package simulation;
 
 record Resource(String id, String name, ResourceType type) {}
 

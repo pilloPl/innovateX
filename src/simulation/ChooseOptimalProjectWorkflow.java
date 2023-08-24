@@ -1,24 +1,20 @@
-package projects;
+package simulation;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 
 import java.util.List;
 
 
 interface ChooseOptimalProjectWorkflow extends
-        Function<Supplier<Resource>, Function<CalculateProfitQuery, Result>> {};
+        Function<List<Project>, Function<List<Resource>, Function<Function<Project, Double>, Result>>> {};
 
 
 class Test {
 
-    static final Function<List<Project>, Function<List<Resource>, Function<Function<Project, Double>, Result>>> WORKFLOW = projects -> resources -> profitFunction -> new ChoseOptimalProjects()
-            .apply(new CalculateProfitQuery(projects, resources, profitFunction));
 
     public static void main(String[] args) {
-
         // Tworzenie zasobów
         Resource skill1 = new Resource("Ania", "Java Developer", ResourceType.SKILL);
         Resource skill2 = new Resource("Marek", "Web Designer", ResourceType.SKILL);
@@ -41,13 +37,21 @@ class Test {
         List<Project> projectsToOptimize = Arrays.asList(project1, project2);
         List<Resource> resourcesWeHave = Arrays.asList(skill1, skill2, tool1);
 
-        Result result = WORKFLOW
-                .apply(projectsToOptimize)
-                .apply(resourcesWeHave)
-                .apply(chooseProfitFunction());
+        Result result = calculate(projectsToOptimize, resourcesWeHave);
 
         System.out.println("Max Profit: " + result.profit());
         System.out.println("Selected Projects: " + result.projects());
+    }
+
+    private static Result calculate(List<Project> projectsToOptimize, List<Resource> resourcesWeHave) {
+
+        ChooseOptimalProjectWorkflow workflow = projects -> resources -> profitFunction -> new ChoseOptimalProjects()
+                .apply(new CalculateProfitQuery(projects, resources, profitFunction));
+
+        return workflow
+                .apply(projectsToOptimize)
+                .apply(resourcesWeHave)
+                .apply(chooseProfitFunction());
     }
 
     private static Function<Project, Double> chooseProfitFunction() {
