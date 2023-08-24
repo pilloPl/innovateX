@@ -2,77 +2,84 @@ package simulation;
 
 import java.util.*;
 import java.util.function.Function;
-
-
-import java.util.List;
-
+import java.util.stream.Collectors;
 
 interface ChooseOptimalProjectWorkflow extends
-        Function<List<Project>, Function<List<Resource>, Function<Function<Project, Double>, Result>>> {};
-
-
-class Test {
-
-
-    public static void main(String[] args) {
-        // Tworzenie zasobów
-        Resource skill1 = new Resource("Ania", "Java Developer", ResourceType.SKILL);
-        Resource skill2 = new Resource("Marek", "Web Designer", ResourceType.SKILL);
-        Resource tool1 = new Resource("XPS", "Laptop", ResourceType.DEVICE);
-
-        // Creating projects
-        Project project1 = new Project("Website Creation", 1000, 3000, 30, 500,
-                Arrays.asList(
-                        new RequiredResource("Web Designer", ResourceType.SKILL)
-
-                )
-        );
-
-        Project project2 = new Project("Database Setup", 1500, 4000, 50, 800,
-                Arrays.asList(
-                        new RequiredResource("Web Designer", ResourceType.SKILL)
-                )
-        );
-
-
-        List<Project> projectsToOptimize = Arrays.asList(project1, project2);
-        List<Resource> resourcesWeHave = Arrays.asList(skill1, skill2, tool1);
-
-
-
-
-
-        Result result = calculate(projectsToOptimize, resourcesWeHave);
-
-        System.out.println("Max Profit: " + result.profit());
-        System.out.println("Selected Projects: " + result.projects());
-    }
-
-    private static Result calculate(List<Project> projectsToOptimize, List<Resource> resourcesWeHave) {
-
-        ChooseOptimalProjectWorkflow workflow = projects -> resources -> profitFunction -> new ChoseOptimalProjects()
-                .apply(new CalculateProfitQuery(projects, resources, profitFunction));
-
-        return workflow
-                .apply(projectsToOptimize)
-                .apply(resourcesWeHave)
-                .apply(chooseProfitFunction());
-    }
-
-    private static Function<Project, Double> chooseProfitFunction() {
-        return project -> project.estimatedEarnings() - project.estimatedBudget();
-    }
+        Function<List<Project>, Function<List<Resource>, Function<Function<Project, Double>, Result>>> {
 }
 
-
-record Result(Double profit, List<Project> projects) {
-
+class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
     @Override
-    public String toString() {
-        return "Result{" +
-                "profit=" + profit +
-                ", projects=" + projects +
-                '}';
+    public Result apply(CalculateProfitQuery query) {
+        List<Project> automaticallyIncludedProjects =
+                query.projects().stream()
+                .filter(project -> project.missingResource().isEmpty()).toList();
+
+        double guaranteedProfit = automaticallyIncludedProjects.stream()
+                .mapToDouble(query.profitFunction()::apply)
+                .sum();
+
+        int totalResources = query.resources().size();
+
+        double[] dp = new double[totalResources + 1];
+        List<Project>[] projectLists = new List[totalResources + 1];
+        List<Set<Resource>> allocatedResources = new ArrayList<>(totalResources + 1);
+
+        for (int i = 0; i <= totalResources; i++) {
+            projectLists[i] = new ArrayList<>();
+            allocatedResources.add(new HashSet<>());
+        }
+
+        for (Project project : query.orderedProjects()) {
+            if (!project.missingResource().isEmpty()) {
+                List<Resource> allocatableResources = resourcesFromRequired(project.missingResource(), query.resources());
+
+                if (allocatableResources.isEmpty())
+                    continue;
+
+                double projectProfit = query.profitFunction().apply(project);
+                int allocatableResourcesCount = allocatableResources.size();
+
+                for (int j = totalResources; j >= allocatableResourcesCount; j--) {
+                    // Check if resources are already allocated
+                    if (!isResourceAllocated(allocatableResources, allocatedResources.get(j - allocatableResourcesCount))) {
+                        if (dp[j] < projectProfit + dp[j - allocatableResourcesCount]) {
+                            dp[j] = projectProfit + dp[j - allocatableResourcesCount];
+
+                            projectLists[j] = new ArrayList<>(projectLists[j - allocatableResourcesCount]);
+                            projectLists[j].add(project);
+
+                            allocatedResources.get(j).addAll(allocatableResources);
+                        }
+                    }
+                }
+            }
+        }
+        projectLists[totalResources].addAll(automaticallyIncludedProjects);
+        return new Result(dp[totalResources] + guaranteedProfit, projectLists[totalResources]);
+    }
+
+    private boolean isResourceAllocated(List<Resource> required, Set<Resource> allocated) {
+        return required.stream().anyMatch(allocated::contains);
+    }
+
+    private List<Resource> resourcesFromRequired(List<MissingResource> requiredResources, List<Resource> availableResources) {
+        return requiredResources.stream()
+                .flatMap(req -> availableResources.stream()
+                        .filter(resource -> resource.name().equals(req.name()) && resource.resourceType().equals(req.resourceType())))
+                .collect(Collectors.toList());
+    }
+
+}
+
+record CalculateProfitQuery(List<Project> projects,
+                            List<Resource> resources,
+                            Function<Project, Double> profitFunction) {
+
+    List<Project> orderedProjects() {
+        return projects.stream().sorted(Comparator.comparing(profitFunction).reversed()).toList();
     }
 }
+
+

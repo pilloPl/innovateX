@@ -2,7 +2,9 @@ package simulation;
 
 import java.util.List;
 
-record Project(String name, double estimatedBudget, double estimatedEarnings, int risk, double penalty,
-                      List<RequiredResource> requiredResources) {
+public record Project(String name, double estimatedBudget, double estimatedEarnings, int risk, double penalty,
+                      List<MissingResource> missingResource) {
 
 }
+
+
