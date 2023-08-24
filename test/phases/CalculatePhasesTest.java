@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CalculatePhasesTest {
 
-    static final CalculatePhases CALCULATE_PHASES = new CalculatePhases(new IntermediatePhaseCreator());
+    static final CalculatePhases CALCULATE_PHASES = new CalculatePhases();
 
     @Test
     void testPhasesCalculation() {
