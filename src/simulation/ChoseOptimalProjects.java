@@ -12,7 +12,6 @@ record Project(String name, double estimatedCost, double estimatedEarnings, int 
         return estimatedEarnings - estimatedCost;
     }
 }
-
 record Resource(String id, String name, String resourceType) {}
 
 record MissingResource(String name, String resourceType) {
