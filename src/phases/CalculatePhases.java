@@ -1,8 +1,97 @@
 package phases;
 
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
+import static java.util.stream.Stream.of;
+
+
+record Phase(Stages stages) {
+    @Override
+    public String toString() {
+        return "phases.Phase: " + stages;
+    }
+}
+
+record Phases(List<Phase> phases) {
+
+    static Phases empty() {
+        return new Phases(new ArrayList<>());
+    }
+
+    List<Phase> all() {
+        return Collections.unmodifiableList(phases);
+    }
+
+    Phases add(Phase phase) {
+        List<Phase> newPhases = concat(
+                phases.stream(), of(phase)).collect(toList());
+        return new Phases(newPhases);
+    }
+
+    Set<Stage> allStages() {
+        return this.all().stream()
+                .flatMap(phase -> phase.stages().all().stream())
+                .collect(Collectors.toSet());
+    }
+}
+
+
+record Stage(String name, Stages dependencies) {
+    Stage(String name) {
+        this(name, new Stages(new ArrayList<>()));
+    }
+
+    Stage dependsOn(Stage stage) {
+        return new Stage(this.name, this.dependencies.add(stage));
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+
+record Stages(List<Stage> stages) {
+
+    List<Stage> all() {
+        return Collections.unmodifiableList(stages);
+    }
+
+    Stages add(Stage stage) {
+        List<Stage> newStages =
+                concat(stages.stream(), of(stage)).collect(toList());
+        return new Stages(newStages);
+    }
+
+    @Override
+    public String toString() {
+        return "phases.Stages{" +
+                "stages=" + stages +
+                '}';
+    }
+
+    boolean isEmpty() {
+        return all().isEmpty();
+    }
+
+    Stages withAllDependenciesPresentIn(Collection<Stage> stages) {
+        return new Stages(this.all().stream()
+                .filter(s -> stages.containsAll(s.dependencies().all()))
+                .collect(toList()));
+    }
+
+    Stages removeAll(Collection<Stage> stages) {
+        return new Stages(this.all().stream()
+                .filter(s -> !stages.contains(s))
+                .collect(toList()));
+    }
+}
+
 
 class CalculatePhases implements Function<Stages, Phases> {
     private final BiFunction<Stages, Phases, Phases> createPhasesRecursively;
@@ -33,5 +122,22 @@ class IntermediatePhaseCreator implements BiFunction<Stages, Phases, Phases> {
         Phases newPhases = accumulatedPhases.add(new Phase(stagesWithoutDependencies));
         remainingStages = remainingStages.removeAll(stagesWithoutDependencies.all());
         return this.apply(remainingStages, newPhases);
+    }
+
+
+}
+
+class Test {
+
+    public static void main(String[] args) {
+        Stage stage1 = new Stage("Stage1");
+        Stage stage2 = new Stage("Stage2").dependsOn(stage1);
+        Stage stage3 = new Stage("Stage3").dependsOn(stage1);
+        Stage stage4 = new Stage("Stage4").dependsOn(stage1).dependsOn(stage2);
+
+        Stages stages = new Stages(Arrays.asList(stage1, stage2, stage3, stage4));
+        CalculatePhases function = new CalculatePhases(new IntermediatePhaseCreator());
+        Phases phases = function.apply(stages);
+        phases.all().forEach(System.out::println);
     }
 }
