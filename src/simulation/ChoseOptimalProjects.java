@@ -1,5 +1,6 @@
 package simulation;
 
+import java.time.Period;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -98,7 +99,6 @@ record Result(Double profit, List<Project> projects) {
 class Test {
 
     public static void main(String[] args) {
-
         // Tworzenie zasobów
         Resource skill1 = new Resource("Ania", "Java Developer", "SKILL");
         Resource skill2 = new Resource("Marek", "Web Designer", "SKILL");
