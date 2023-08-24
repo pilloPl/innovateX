@@ -20,7 +20,7 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
                 .mapToDouble(query.profitFunction()::apply)
                 .sum();
 
-        int totalResources = query.resources().size();
+        int totalResources = query.availableResources().size();
 
         double[] dp = new double[totalResources + 1];
         List<Project>[] projectLists = new List[totalResources + 1];
@@ -33,7 +33,7 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
         for (Project project : query.orderedProjects()) {
             if (!project.missingResource().isEmpty()) {
-                List<Resource> allocatableResources = resourcesFromRequired(project.missingResource(), query.resources());
+                List<Resource> allocatableResources = resourcesFromRequired(project.missingResource(), query.availableResources());
 
                 if (allocatableResources.isEmpty())
                     continue;
@@ -42,7 +42,7 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
                 int allocatableResourcesCount = allocatableResources.size();
 
                 for (int j = totalResources; j >= allocatableResourcesCount; j--) {
-                    // Check if resources are already allocated
+                    // Check if availableResources are already allocated
                     if (!isResourceAllocated(allocatableResources, allocatedResources.get(j - allocatableResourcesCount))) {
                         if (dp[j] < projectProfit + dp[j - allocatableResourcesCount]) {
                             dp[j] = projectProfit + dp[j - allocatableResourcesCount];
@@ -74,7 +74,7 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 }
 
 record CalculateProfitQuery(List<Project> projects,
-                            List<Resource> resources,
+                            List<Resource> availableResources,
                             Function<Project, Double> profitFunction) {
 
     List<Project> orderedProjects() {
