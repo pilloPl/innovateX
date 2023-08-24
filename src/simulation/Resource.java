@@ -6,4 +6,9 @@ enum ResourceType {
     SKILL, PERMISSION, DEVICE
 }
 
-record RequiredResource(String name, ResourceType type) {}
+record RequiredResource(String name, ResourceType type) {
+
+    boolean canBeAllocatedBy(Resource resource) {
+        return this.type.equals(resource.type());
+    }
+}
