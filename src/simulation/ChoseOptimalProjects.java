@@ -1,6 +1,9 @@
 package simulation;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -14,16 +17,32 @@ record Project(String name, double estimatedCost, double estimatedEarnings, int 
     }
 }
 
-record Resource(String id, String name, String resourceType) {
-}
+record TimeSlot(Instant from, Instant to) {
 
-record MissingResource(String name, String resourceType) {
+    static TimeSlot createMonthlyTimeSlotAtUTC(int year, int month) {
+        LocalDate startOfMonth = LocalDate.of(year, month, 1);
+        LocalDate endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
+        Instant from = startOfMonth.atStartOfDay(ZoneId.of("UTC")).toInstant();
+        Instant to = endOfMonth.atTime(23, 59, 59).atZone(ZoneId.of("UTC")).toInstant();
+        return new TimeSlot(from, to);
+    }
 
-    boolean canBeAllocatedBy(Resource resource) {
-        return this.resourceType.equals(resource.resourceType());
+    boolean within(TimeSlot other) {
+        return !this.from.isBefore(other.from) && !this.to.isAfter(other.to);
     }
 }
 
+record Resource(String id, String name, String resourceType, TimeSlot timeSlot) {
+}
+
+record MissingResource(String name, String resourceType, TimeSlot timeSlot) {
+
+    boolean canBeAllocatedBy(Resource resource) {
+        return  resource.name().equals(name) &&
+                resource.resourceType().equals(resourceType) &&
+                timeSlot.within(resource.timeSlot());
+    }
+}
 
 class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
@@ -70,7 +89,7 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
                     }
                 }
             }
-          
+
         }
         projectLists[totalResources].addAll(automaticallyIncludedProjects);
         return new Result(dp[totalResources] + guaranteedProfit, projectLists[totalResources]);
@@ -82,8 +101,8 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
     private List<Resource> resourcesFromRequired(List<MissingResource> requiredResources, List<Resource> availableResources) {
         return requiredResources.stream()
-                .flatMap(req -> availableResources.stream()
-                        .filter(resource -> resource.name().equals(req.name()) && resource.resourceType().equals(req.resourceType())))
+                .flatMap(requiredResource -> availableResources.stream()
+                        .filter(requiredResource::canBeAllocatedBy))
                 .collect(Collectors.toList());
     }
 
@@ -110,21 +129,23 @@ record Result(Double profit, List<Project> projects) {
 class Test {
 
     public static void main(String[] args) {
-        // Tworzenie zasobów
-        Resource skill1 = new Resource("Ania", "Java Developer", "SKILL");
-        Resource skill2 = new Resource("Marek", "Web Designer", "SKILL");
-        Resource tool1 = new Resource("XPS", "Laptop", "DEVICE");
+        TimeSlot june = TimeSlot.createMonthlyTimeSlotAtUTC(2023, 6);
+        TimeSlot october = TimeSlot.createMonthlyTimeSlotAtUTC(2023, 10);
+
+        Resource skill1 = new Resource("Ania", "Java Developer", "SKILL", june);
+        Resource skill2 = new Resource("Marek", "Web Designer", "SKILL", october);
+        Resource tool1 = new Resource("XPS", "Laptop", "DEVICE", october);
 
         // Creating projects
         Project project1 = new Project("Website Creation", 1000, 3000, 30, 500,
                 Arrays.asList(
-                        new MissingResource("Web Designer", "SKILL")
+                        new MissingResource("Web Designer", "SKILL", october)
                 )
         );
 
         Project project2 = new Project("Database Setup", 1500, 4000, 50, 800,
                 Arrays.asList(
-                        new MissingResource("Web Designer", "SKILL")
+                        new MissingResource("Web Designer", "SKILL", october)
                 )
         );
 
