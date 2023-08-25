@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
 
-record ChosenStage(String name, LocalDate startDate, LocalDate finishAt, Set<String> resources) {
+public record ChosenStage(String name, LocalDate startDate, LocalDate finishAt, Set<String> resources) {
 }
 
 class Test {

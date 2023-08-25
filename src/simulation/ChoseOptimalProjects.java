@@ -2,11 +2,13 @@ package simulation;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.Period;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
 
 
 record Project(String name, double estimatedCost, double estimatedEarnings, int risk, double penalty,
@@ -17,28 +19,10 @@ record Project(String name, double estimatedCost, double estimatedEarnings, int 
     }
 }
 
-record TimeSlot(Instant from, Instant to) {
-
-    static TimeSlot createMonthlyTimeSlotAtUTC(int year, int month) {
-        LocalDate startOfMonth = LocalDate.of(year, month, 1);
-        LocalDate endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
-        Instant from = startOfMonth.atStartOfDay(ZoneId.of("UTC")).toInstant();
-        Instant to = endOfMonth.atTime(23, 59, 59).atZone(ZoneId.of("UTC")).toInstant();
-        return new TimeSlot(from, to);
-    }
-
-    boolean within(TimeSlot other) {
-        return !this.from.isBefore(other.from) && !this.to.isAfter(other.to);
-    }
-}
-
-record Resource(String id, String name, String resourceType, TimeSlot timeSlot) {
-}
-
 record MissingResource(String name, String resourceType, TimeSlot timeSlot) {
 
     boolean canBeAllocatedBy(Resource resource) {
-        return  resource.name().equals(name) &&
+        return resource.name().equals(name) &&
                 resource.resourceType().equals(resourceType) &&
                 timeSlot.within(resource.timeSlot());
     }
@@ -62,48 +46,56 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
                 .mapToDouble(Project::estimatedProfit)
                 .sum();
 
-
         for (int i = 0; i <= totalResources; i++) {
             projectLists[i] = new ArrayList<>();
             allocatedResources.add(new HashSet<>());
         }
 
+        List<Resource> availableResources = new ArrayList<>(query.availableResources());
         for (Project project : query.orderedProjects()) {
-            List<Resource> allocatableResources = resourcesFromRequired(project.missingResource(), query.availableResources());
-            if (allocatableResources.isEmpty())
+            List<Resource> chosenResources = resourcesFromRequired(project.missingResource(), availableResources);
+            if (chosenResources.isEmpty()) {
                 continue;
+            }
+            availableResources.removeAll(chosenResources);
 
             double projectProfit = project.estimatedProfit();
-            int allocatableResourcesCount = allocatableResources.size();
+            int chosenResourcesCount = chosenResources.size();
 
-            for (int j = totalResources; j >= allocatableResourcesCount; j--) {
-                // Check if availableResources are already allocated
-                if (!isResourceAllocated(allocatableResources, allocatedResources.get(j - allocatableResourcesCount))) {
-                    if (dp[j] < projectProfit + dp[j - allocatableResourcesCount]) {
-                        dp[j] = projectProfit + dp[j - allocatableResourcesCount];
+            for (int j = totalResources; j >= chosenResourcesCount; j--) {
+                if (dp[j] < projectProfit + dp[j - chosenResourcesCount]) {
+                    dp[j] = projectProfit + dp[j - chosenResourcesCount];
 
-                        projectLists[j] = new ArrayList<>(projectLists[j - allocatableResourcesCount]);
-                        projectLists[j].add(project);
+                    projectLists[j] = new ArrayList<>(projectLists[j - chosenResourcesCount]);
+                    projectLists[j].add(project);
 
-                        allocatedResources.get(j).addAll(allocatableResources);
-                    }
+                    allocatedResources.get(j).addAll(chosenResources);
                 }
             }
-
         }
+
         projectLists[totalResources].addAll(automaticallyIncludedProjects);
         return new Result(dp[totalResources] + guaranteedProfit, projectLists[totalResources]);
     }
 
-    private boolean isResourceAllocated(List<Resource> required, Set<Resource> allocated) {
-        return required.stream().anyMatch(allocated::contains);
-    }
 
     private List<Resource> resourcesFromRequired(List<MissingResource> requiredResources, List<Resource> availableResources) {
-        return requiredResources.stream()
-                .flatMap(requiredResource -> availableResources.stream()
-                        .filter(requiredResource::canBeAllocatedBy))
-                .collect(Collectors.toList());
+        List<Resource> result = new ArrayList<>();
+
+        for (MissingResource required : requiredResources) {
+            Resource matchingResource = availableResources.stream()
+                    .filter(required::canBeAllocatedBy)
+                    .findFirst()
+                    .orElse(null);
+
+            if (matchingResource != null) {
+                result.add(matchingResource);
+            } else {
+                return Collections.emptyList();
+            }
+        }
+
+        return result;
     }
 
 }
@@ -149,7 +141,6 @@ class Test {
                 )
         );
 
-
         List<Project> projectsToOptimize = Arrays.asList(project1, project2);
         List<Resource> resourcesWeHave = Arrays.asList(skill1, skill2, tool1);
         CalculateProfitQuery query = new CalculateProfitQuery(projectsToOptimize, resourcesWeHave);
@@ -161,5 +152,4 @@ class Test {
 
 
 }
-
 

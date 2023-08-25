@@ -1,15 +1,8 @@
 package phases;
 
-import java.time.LocalDate;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Stream.concat;
-import static java.util.stream.Stream.of;
-
 
 
 public class CalculatePhases implements Function<Stages, Phases> {

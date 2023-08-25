@@ -3,29 +3,39 @@ package simulation;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class ChoseOptimalProjectsTest {
+class ChoseOptimalProjectsForEmployee {
 
     final TimeSlot JUNE = TimeSlot.createMonthlyTimeSlotAtUTC(2023, 6);
     final TimeSlot NOVEMBER = TimeSlot.createMonthlyTimeSlotAtUTC(2023, 11);
 
     @Test
-    void nothingIsDoneWhenNoResources() {
+    void samePersonCanBeIn5ProjectsGivenACertainSkill() {
         //given
         List<Project> projects = List.of(
-                new Project("Project1", 100, 200, 1, 0, List.of(new MissingResource("COMMON SENSE", "Skill", JUNE))),
-                new Project("Project2", 100, 200, 1, 0, List.of(new MissingResource("THINKING", "Skill", JUNE))));
-        List<Resource> resources = new ArrayList<>();
+                new Project("Project1", 100, 300, 1, 0, List.of(new MissingResource("Admin", "PERMISSION", JUNE))),
+                new Project("Project2", 100, 400, 1, 0, List.of(new MissingResource("Admin", "PERMISSION", JUNE))),
+                new Project("Project3", 100, 500, 1, 0, List.of(new MissingResource("Admin", "PERMISSION", JUNE))),
+                new Project("Project4", 100, 600, 1, 0, List.of(new MissingResource("Admin", "PERMISSION", JUNE))),
+                new Project("Project5", 100, 700, 1, 0, List.of(new MissingResource("Admin", "PERMISSION", JUNE))),
+                new Project("Project6", 100, 800, 1, 0, List.of(new MissingResource("Admin", "PERMISSION", JUNE))));
 
+        Employee staszek = new Employee(
+                "Staszek",
+                Arrays.asList("Java", "Python"),
+                Arrays.asList("Admin", "Editor"),
+                Arrays.asList(JUNE, NOVEMBER)
+        );
         //when
-        Result result = new ChoseOptimalProjects().apply(new CalculateProfitQuery(projects, resources));
+        Result result = new ChoseOptimalProjects().apply(new CalculateProfitQuery(projects, staszek.toResources()));
 
         //then
-        assertEquals(0, result.profit(), 0.0d);
-        assertEquals(0, result.projects().size());
+        assertEquals(2500, result.profit(), 0.0d);
+        assertEquals(5, result.projects().size());
 
     }
 
@@ -50,21 +60,20 @@ class ChoseOptimalProjectsTest {
     }
 
     @Test
-    void ifEnoughResourcesAllProjectsAreChosen() {
+    void mostProfitableProjectIsChosen() {
         //given
         List<Project> projects = List.of(
                 new Project("Project1", 100, 1900, 1, 0, List.of(new MissingResource("WEB DEVELOPMENT", "Skill", NOVEMBER))),
                 new Project("Project2", 100, 200, 1, 0, List.of(new MissingResource("WEB DEVELOPMENT", "Skill", NOVEMBER))));
-        Resource r1 = new Resource("anna", "WEB DEVELOPMENT", "Skill", NOVEMBER);
-        Resource r2 = new Resource("anna2", "WEB DEVELOPMENT", "Skill", NOVEMBER);
-        List<Resource> resources = List.of(r1, r2);
+        List<Resource> resources = List.of(new Resource("anna", "WEB DEVELOPMENT", "Skill", NOVEMBER));
 
         //when
         Result result = new ChoseOptimalProjects().apply(new CalculateProfitQuery(projects, resources));
 
         //then
-        assertEquals(1900, result.profit(), 0.0d);
-        assertEquals(2, result.projects().size());
+        assertEquals(1800, result.profit(), 0.0d);
+        assertEquals(1, result.projects().size());
+        assertEquals(result.projects().get(0).name(), "Project1");
     }
 
     @Test
