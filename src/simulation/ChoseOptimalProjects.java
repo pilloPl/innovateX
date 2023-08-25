@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -102,6 +103,11 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
 record CalculateProfitQuery(List<Project> projects,
                             List<Resource> availableResources) {
+
+    CalculateProfitQuery(List<Project> projects,
+                         Supplier<List<Resource>> availableResources) {
+        this(projects, availableResources.get());
+    }
 
     List<Project> orderedProjects() {
         return projects.stream().sorted(Comparator.comparing(Project::estimatedProfit).reversed()).toList();

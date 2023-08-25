@@ -9,11 +9,11 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
-record Employee(String name, List<String> skills,
+public record Employee(String name, List<String> skills,
                        List<String> permissions,
                        List<TimeSlot> availabilities) {
 
-    List<Resource> toResources() {
+    public List<Resource> toResources() {
         Stream<Resource> skillResources = availabilities.stream()
                 .flatMap(timeSlot ->
                         skills.stream()

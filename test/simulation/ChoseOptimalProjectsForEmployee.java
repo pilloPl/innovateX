@@ -1,6 +1,8 @@
 package simulation;
 
+import choosing.acl.Employee;
 import org.junit.jupiter.api.Test;
+import simulation.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +33,7 @@ class ChoseOptimalProjectsForEmployee {
                 Arrays.asList(JUNE, NOVEMBER)
         );
         //when
-        Result result = new ChoseOptimalProjects().apply(new CalculateProfitQuery(projects, staszek.toResources()));
+        Result result = new ChoseOptimalProjects().apply(new CalculateProfitQuery(projects, staszek::toResources));
 
         //then
         assertEquals(2500, result.profit(), 0.0d);
