@@ -1,15 +1,9 @@
 package simulation;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import static java.util.stream.Collectors.toList;
 
 
 record Project(String name, double estimatedCost, double estimatedEarnings, int risk, double penalty,
@@ -23,9 +17,7 @@ record Project(String name, double estimatedCost, double estimatedEarnings, int 
 record MissingResource(String name, String resourceType, TimeSlot timeSlot) {
 
     boolean canBeAllocatedBy(Resource resource) {
-        return resource.name().equals(name) &&
-                resource.resourceType().equals(resourceType) &&
-                timeSlot.within(resource.timeSlot());
+        return resource.canBeUsedFor(name, resourceType, timeSlot);
     }
 }
 
@@ -33,11 +25,14 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
     @Override
     public Result apply(CalculateProfitQuery query) {
-        int totalResources = query.availableResources().size();
+        int totalResources = query.availableResources()
+                .stream()
+                .mapToInt(resource -> resource.capabilitiesSize())
+                .sum();
 
         double[] dp = new double[totalResources + 1];
         List<Project>[] projectLists = new List[totalResources + 1];
-        List<Set<Resource>> allocatedResources = new ArrayList<>(totalResources + 1);
+        List<Set<ResourceCapability>> allocatedResources = new ArrayList<>(totalResources + 1);
 
         List<Project> automaticallyIncludedProjects =
                 query.projects().stream()
@@ -54,14 +49,14 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
         List<Resource> availableResources = new ArrayList<>(query.availableResources());
         for (Project project : query.orderedProjects()) {
-            List<Resource> chosenResources = resourcesFromRequired(project.missingResource(), availableResources);
+            List<ResourceCapability> chosenResources = resourcesFromRequired(project.missingResource(), availableResources);
             if (chosenResources.isEmpty()) {
                 continue;
             }
-            availableResources.removeAll(chosenResources);
 
             double projectProfit = project.estimatedProfit();
             int chosenResourcesCount = chosenResources.size();
+
 
             for (int j = totalResources; j >= chosenResourcesCount; j--) {
                 if (dp[j] < projectProfit + dp[j - chosenResourcesCount]) {
@@ -80,8 +75,8 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
     }
 
 
-    private List<Resource> resourcesFromRequired(List<MissingResource> requiredResources, List<Resource> availableResources) {
-        List<Resource> result = new ArrayList<>();
+    private List<ResourceCapability> resourcesFromRequired(List<MissingResource> requiredResources, List<Resource> availableResources) {
+        List<ResourceCapability> result = new ArrayList<>();
 
         for (MissingResource required : requiredResources) {
             Resource matchingResource = availableResources.stream()
@@ -90,7 +85,8 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
                     .orElse(null);
 
             if (matchingResource != null) {
-                result.add(matchingResource);
+                ResourceCapability used = matchingResource.use(required.name(), required.resourceType());
+                result.add(used);
             } else {
                 return Collections.emptyList();
             }
