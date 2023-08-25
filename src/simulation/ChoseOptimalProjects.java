@@ -13,7 +13,9 @@ record Project(String name, double estimatedCost, double estimatedEarnings, int 
         return estimatedEarnings - estimatedCost;
     }
 }
-record Resource(String id, String name, String resourceType) {}
+
+record Resource(String id, String name, String resourceType) {
+}
 
 record MissingResource(String name, String resourceType) {
 
@@ -33,6 +35,15 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
         List<Project>[] projectLists = new List[totalResources + 1];
         List<Set<Resource>> allocatedResources = new ArrayList<>(totalResources + 1);
 
+        List<Project> automaticallyIncludedProjects =
+                query.projects().stream()
+                        .filter(project -> project.missingResource().isEmpty()).toList();
+
+        double guaranteedProfit = automaticallyIncludedProjects.stream()
+                .mapToDouble(Project::estimatedProfit)
+                .sum();
+
+
         for (int i = 0; i <= totalResources; i++) {
             projectLists[i] = new ArrayList<>();
             allocatedResources.add(new HashSet<>());
@@ -40,7 +51,6 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
         for (Project project : query.orderedProjects()) {
             List<Resource> allocatableResources = resourcesFromRequired(project.missingResource(), query.availableResources());
-
             if (allocatableResources.isEmpty())
                 continue;
 
@@ -60,9 +70,10 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
                     }
                 }
             }
-
+          
         }
-        return new Result(dp[totalResources], projectLists[totalResources]);
+        projectLists[totalResources].addAll(automaticallyIncludedProjects);
+        return new Result(dp[totalResources] + guaranteedProfit, projectLists[totalResources]);
     }
 
     private boolean isResourceAllocated(List<Resource> required, Set<Resource> allocated) {
