@@ -8,4 +8,8 @@ public record Project(String name, double estimatedCost, double estimatedEarning
     double estimatedProfit() {
         return estimatedEarnings - estimatedCost;
     }
+
+    Double getRisk() {
+        return Double.valueOf(risk);
+    }
 }

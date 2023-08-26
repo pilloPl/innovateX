@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import shared.TimeSlot;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -66,6 +67,30 @@ class ChoseOptimalProjectsTest {
         //then
         assertEquals(1900, result.profit(), 0.0d);
         assertEquals(2, result.projects().size());
+    }
+
+    @Test
+    void moreProfitableProjectIsChosen() {
+        //given
+        List<Project> projects = List.of(
+                new Project("Project1", 100, 19000, 10, 0, List.of(new MissingResource("WEB DEVELOPMENT", "Skill", NOVEMBER))),
+                new Project("Project2", 100, 200, 1, 0, List.of(new MissingResource("WEB DEVELOPMENT", "Skill", NOVEMBER))));
+        Resource r1 = new Resource("anna", "WEB DEVELOPMENT", "Skill", NOVEMBER);
+        List<Resource> resources = List.of(r1);
+
+        //when
+        Result result = new ChoseOptimalProjects().apply(new CalculateProfitQuery(projects, resources));
+
+        //then
+        assertEquals(18900, result.profit(), 0.0d);
+        assertEquals(1, result.projects().size());
+
+        //when
+        Result result2 = new ChoseOptimalProjects().apply(new CalculateProfitQuery(projects, resources, Project::getRisk, Comparator.comparing(Project::getRisk)));
+
+        //then
+        assertEquals(1, result2.profit(), 0.0d);
+        assertEquals(1, result2.projects().size());
     }
 
     @Test

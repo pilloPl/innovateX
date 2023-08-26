@@ -48,7 +48,6 @@ class CreateStagesTest {
         assertTrue(getStage(stages, "Stage1").dependencies().stages().contains(getStage(stages, "Stage2")));
         assertEquals(1, getStage(stages, "Stage1").dependencies().all().size());
 
-
         assertEquals(0, getStage(stages, "Stage2").dependencies().all().size());
 
         assertEquals(0, getStage(stages, "Stage3").dependencies().all().size());

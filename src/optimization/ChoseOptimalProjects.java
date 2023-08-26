@@ -38,7 +38,7 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
             }
             availableResources.removeAll(chosenResources);
 
-            double projectProfit = project.estimatedProfit();
+            double projectProfit = query.optimalizationFunction().apply(project);
             int chosenResourcesCount = chosenResources.size();
 
             for (int j = totalResources; j >= chosenResourcesCount; j--) {
@@ -80,16 +80,17 @@ class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 }
 
 record CalculateProfitQuery(List<Project> projects,
-                            List<Resource> availableResources) {
+                            List<Resource> availableResources, Function<Project, Double> optimalizationFunction, Comparator<Project> comparator) {
 
     CalculateProfitQuery(List<Project> projects,
-                         Supplier<List<Resource>> availableResources) {
-        this(projects, availableResources.get());
+                         List<Resource> availableResources) {
+        this(projects, availableResources, Project::estimatedProfit, Comparator.comparing(Project::estimatedProfit).reversed());
     }
 
     List<Project> orderedProjects() {
-        return projects.stream().sorted(Comparator.comparing(Project::estimatedProfit).reversed()).toList();
+        return projects.stream().sorted(comparator).toList();
     }
+
 }
 
 class Test {
