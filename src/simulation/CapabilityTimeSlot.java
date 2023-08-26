@@ -24,10 +24,6 @@ record CapabilityTimeSlot(String name, String type, TimeSlot timeSlot) {
                 .toList();
     }
 
-    static List<CapabilityTimeSlot> createContinuousAvailabilities(List<CapabilityTimeSlot> resourceAvailabilities) {
-        return mergeContinuousResourceAvailabilities(resourceAvailabilities);
-    }
-
     List<CapabilityTimeSlot> notCoveredBy(CapabilityTimeSlot capabilityTimeSlot) {
         return
                 timeSlot().diff(capabilityTimeSlot.timeSlot())
@@ -42,30 +38,6 @@ record CapabilityTimeSlot(String name, String type, TimeSlot timeSlot) {
 
     boolean partiallyCoveredBy(CapabilityTimeSlot capabilityTimeSlot) {
         return this.timeSlot().overlapsWith(capabilityTimeSlot.timeSlot());
-    }
-
-    private static List<CapabilityTimeSlot> mergeContinuousResourceAvailabilities(List<CapabilityTimeSlot> resourceAvailabilities) {
-        return resourcesGroupedByNameAndType(resourceAvailabilities)
-                .entrySet()
-                .stream()
-                .flatMap(entry -> {
-                    List<TimeSlot> timeSlots = entry
-                            .getValue()
-                            .stream()
-                            .map(CapabilityTimeSlot::timeSlot)
-                            .toList();
-                    List<TimeSlot> mergedTimeSlots = TimeSlot.mergeContinuousTimeSlots(timeSlots);
-                    return mergedTimeSlots.stream().map(ts -> new CapabilityTimeSlot(entry.getKey().get(0), entry.getKey().get(1), ts));
-                })
-                .collect(toList());
-    }
-
-    private static LinkedHashMap<List<String>, List<CapabilityTimeSlot>> resourcesGroupedByNameAndType(List<CapabilityTimeSlot> resources) {
-        return resources.stream()
-                .collect(groupingBy(
-                        resource -> Arrays.asList(resource.name(), resource.type()),
-                        LinkedHashMap::new, toList()
-                ));
     }
 
 

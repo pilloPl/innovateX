@@ -24,20 +24,14 @@ class AllocatedResource {
         if (found == null) {
             return List.of();
         }
-        List<CapabilityTimeSlot> newCapabilities = new ArrayList<>(resourceNonAvailabilities);
-        newCapabilities.remove(found);
-        newCapabilities.addAll(found.complementWith(forSlot));
-        newCapabilities = CapabilityTimeSlot.createContinuousAvailabilities(newCapabilities);
-        resourceNonAvailabilities = newCapabilities;
+        resourceNonAvailabilities.remove(found);
+        resourceNonAvailabilities.addAll(found.complementWith(forSlot));
         return List.of(new CapabilityTimeSlot(name, type, forSlot));
     }
 
     ProjectAllocationResult allocate(String name, String type, TimeSlot timeSlot) {
         CapabilityTimeSlot slot = new CapabilityTimeSlot(name, type, timeSlot);
-        List<CapabilityTimeSlot> newCapabilities = new ArrayList<>(resourceNonAvailabilities);
-        newCapabilities.add(slot);
-        newCapabilities = CapabilityTimeSlot.createContinuousAvailabilities(newCapabilities);
-        resourceNonAvailabilities = newCapabilities;
+        resourceNonAvailabilities.add(slot);
         return Success;
     }
 

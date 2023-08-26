@@ -5,6 +5,7 @@ import shared.TimeSlot;
 import simulation.ProjectSimulation.ProjectAllocationResult;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 class AvailableResource {
@@ -21,23 +22,14 @@ class AvailableResource {
         this(resourceId, List.of(new CapabilityTimeSlot(name, type, june)));
     }
 
-    List<Resource> toResources() {
-        return resourceAvailabilities.stream().map(r ->
-                        new Resource(resourceId, r.name(), r.type(), r.timeSlot()))
-                .toList();
-    }
-
-    ProjectAllocationResult remove(String name, String type, TimeSlot forSlot) {
+    List<CapabilityTimeSlot> remove(String name, String type, TimeSlot forSlot) {
         CapabilityTimeSlot found = find(name, type, forSlot);
         if (found == null) {
-            return ProjectAllocationResult.Failure;
+            return List.of();
         }
-        List<CapabilityTimeSlot> newCapabilities = new ArrayList<>(resourceAvailabilities);
-        newCapabilities.remove(found);
-        newCapabilities.addAll(found.diff(forSlot));
-        newCapabilities = CapabilityTimeSlot.createContinuousAvailabilities(newCapabilities);
-        resourceAvailabilities = newCapabilities;
-        return ProjectAllocationResult.Success;
+        resourceAvailabilities.remove(found);
+        resourceAvailabilities.addAll(found.diff(forSlot));
+        return List.of(new CapabilityTimeSlot(name, type, forSlot));
     }
 
     private CapabilityTimeSlot find(String name, String type, TimeSlot forSlot) {
@@ -48,10 +40,7 @@ class AvailableResource {
     }
 
     ProjectAllocationResult add(String name, String type, TimeSlot fromSlot) {
-        List<CapabilityTimeSlot> newCapabilities = new ArrayList<>(resourceAvailabilities);
-        newCapabilities.add(new CapabilityTimeSlot(name, type, fromSlot));
-        newCapabilities = CapabilityTimeSlot.createContinuousAvailabilities(newCapabilities);
-        resourceAvailabilities = newCapabilities;
+        resourceAvailabilities.add(new CapabilityTimeSlot(name, type, fromSlot));
         return ProjectAllocationResult.Success;
     }
 
@@ -59,7 +48,11 @@ class AvailableResource {
         return resourceId;
     }
 
-    public void addAll(String name, String type, List<CapabilityTimeSlot> capabilities) {
+    void addAll(String name, String type, List<CapabilityTimeSlot> capabilities) {
         capabilities.forEach(c -> add(name, type, c.timeSlot()));
+    }
+
+    List<CapabilityTimeSlot> resourceAvailabilities() {
+        return Collections.unmodifiableList(resourceAvailabilities);
     }
 }

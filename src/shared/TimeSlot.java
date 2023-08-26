@@ -38,6 +38,12 @@ public record TimeSlot(Instant from, Instant to) {
         }
         throw new IllegalArgumentException("TimeSlots do not overlap nor are contiguous");
     }
+
+    public TimeSlot addOneDay() {
+        Instant nextDay = this.to.plus(1, java.time.temporal.ChronoUnit.DAYS);
+        return new TimeSlot(this.from, nextDay);
+    }
+
     public List<TimeSlot> diff(TimeSlot other) {
         List<TimeSlot> result = new ArrayList<>();
         if (!other.overlapsWith(this)) {

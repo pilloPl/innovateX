@@ -83,5 +83,9 @@ class Project {
         }
         return requiredResources;
     }
+
+    public void allocateAll(String id, String name, String type, List<CapabilityTimeSlot> allocated) {
+        allocated.forEach(capabilityTimeSlot -> allocate(id, name, type, capabilityTimeSlot.timeSlot()));
+    }
 }
 

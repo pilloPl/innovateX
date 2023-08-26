@@ -37,8 +37,8 @@ class ContinuousResourceAvailabilitiesTest {
         );
 
         //when
-        List<CapabilityTimeSlot> result1 = CapabilityTimeSlot.createContinuousAvailabilities(resources);
-        List<CapabilityTimeSlot> result2 = CapabilityTimeSlot.createContinuousAvailabilities(resources2);
+        List<CapabilityTimeSlot> result1 = ProjectSimulation.createContinuousAvailabilities(resources);
+        List<CapabilityTimeSlot> result2 = ProjectSimulation.createContinuousAvailabilities(resources2);
 
         //then
         assertEquals(3, result1.size());
