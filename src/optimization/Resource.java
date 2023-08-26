@@ -1,4 +1,6 @@
-package simulation;
+package optimization;
+
+import shared.TimeSlot;
 
 import java.util.UUID;
 

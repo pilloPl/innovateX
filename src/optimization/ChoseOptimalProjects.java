@@ -1,33 +1,11 @@
-package simulation;
+package optimization;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import shared.TimeSlot;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toList;
-
-
-record Project(String name, double estimatedCost, double estimatedEarnings, int risk, double penalty,
-               List<MissingResource> missingResource) {
-
-    double estimatedProfit() {
-        return estimatedEarnings - estimatedCost;
-    }
-}
-
-record MissingResource(String name, String resourceType, TimeSlot timeSlot) {
-
-    boolean canBeAllocatedBy(Resource resource) {
-        return resource.name().equals(name) &&
-                resource.resourceType().equals(resourceType) &&
-                timeSlot.within(resource.timeSlot());
-    }
-}
 
 class ChoseOptimalProjects implements Function<CalculateProfitQuery, Result> {
 
@@ -111,16 +89,6 @@ record CalculateProfitQuery(List<Project> projects,
 
     List<Project> orderedProjects() {
         return projects.stream().sorted(Comparator.comparing(Project::estimatedProfit).reversed()).toList();
-    }
-}
-
-record Result(Double profit, List<Project> projects) {
-    @Override
-    public String toString() {
-        return "Result{" +
-                "profit=" + profit +
-                ", projects=" + projects +
-                '}';
     }
 }
 
